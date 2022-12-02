@@ -11,19 +11,32 @@ struct IsVoid
 template<typename Res, typename... Args>
 class Delegates_Internal : public Object
 {
+#pragma region f/p
 private:
 	typedef Res(Object::* Function)(Args...);
 	std::vector<Delegate<Res, Args...>> functions = std::vector<Delegate<Res, Args...>>();
+
+#pragma endregion
+
+#pragma region Constructor
 public:
 	Delegates_Internal() = default;
 	Delegates_Internal(nullptr_t);
 	template<typename Class>
 	Delegates_Internal(Res(Class::* ptr)(Args...));
 	~Delegates_Internal() override;
+
+#pragma endregion
+
+#pragma region Methods
 private:
 	size_t FindIndex(const Delegate<Res, Args...>& _function);
 public:
 	Res Invoke(object _instance, Args... _args);
+
+#pragma endregion
+
+#pragma region Operators
 public:
 	template<typename Class>
 	void operator+=(Res(Class::* ptr)(Args...));
@@ -32,7 +45,12 @@ public:
 	template<typename Class>
 	void operator=(Res(Class::* ptr)(Args...));
 	void operator=(nullptr_t);
+
+#pragma endregion
 };
+
+
+#pragma region Constructor
 
 template<typename Res, typename ...Args>
 inline Delegates_Internal<Res, Args...>::Delegates_Internal(nullptr_t)
@@ -47,13 +65,24 @@ inline Delegates_Internal<Res, Args...>::~Delegates_Internal()
 }
 
 template<typename Res, typename ...Args>
+template<typename Class>
+inline Delegates_Internal<Res, Args...>::Delegates_Internal(Res(Class::* ptr)(Args...))
+{
+	Delegate<Res, Args...> _function = ptr;
+	functions.push_back(_function);
+}
+
+#pragma endregion 
+
+#pragma region Methods
+
+template<typename Res, typename ...Args>
 inline size_t Delegates_Internal<Res, Args...>::FindIndex(const Delegate<Res, Args...>& _function)
 {
 	for (size_t i = 0; i < functions.size(); i++)
-	{
 		if (functions[i].GetAddress() == _function.GetAddress())
 			return i;
-	}
+	
 	return -1;
 }
 
@@ -63,22 +92,24 @@ inline Res Delegates_Internal<Res, Args...>::Invoke(object _instance, Args ..._a
 	if (IsVoid<Res>::Value)
 	{
 		for (Delegate<Res, Args...> _function : functions)
-		{
 			_function.Invoke(_instance, _args...);
-		}
+		
 		return Res();
 	}
 	else
 	{
 		Res _result = Res();
 		for (Delegate<Res, Args...> _function : functions)
-		{
 			_result = _function.Invoke(_instance, _args...);
-		}
+		
 		return _result;
 	}
 
 }
+
+#pragma endregion
+
+#pragma region Operators
 
 template<typename Res, typename ...Args>
 inline void Delegates_Internal<Res, Args...>::operator=(nullptr_t)
@@ -86,13 +117,6 @@ inline void Delegates_Internal<Res, Args...>::operator=(nullptr_t)
 	functions.clear();
 }
 
-template<typename Res, typename ...Args>
-template<typename Class>
-inline Delegates_Internal<Res, Args...>::Delegates_Internal(Res(Class::* ptr)(Args...))
-{
-	Delegate<Res, Args...> _function = ptr;
-	functions.push_back(_function);
-}
 
 template<typename Res, typename ...Args>
 template<typename Class>
@@ -122,10 +146,11 @@ inline void Delegates_Internal<Res, Args...>::operator=(Res(Class::* ptr)(Args..
 }
 
 
-
 template<typename... Args>
 using Action = Delegates_Internal<void, Args...>;
 template<typename T, typename... Args>
 using Func = Delegates_Internal<T, Args...>;
 template<typename... Args>
 using Predicate = Delegates_Internal<bool, Args...>;
+
+#pragma endregion 
